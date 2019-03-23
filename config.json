@@ -1,6 +1,6 @@
 {
   "year": 2019,
-  "circle": "Amusement Creators",
+  "title": "Amusement Creators",
   "events": [
     {
       "name": "合同新歓",
@@ -42,5 +42,5 @@
         }
       ]
     }
-  ],
+  ]
 }
