@@ -25,8 +25,12 @@ pub mod elements {
 
             /// Elementにclassを追加する
             /// js -> Element.classList.add()
-            pub fn add_class(&mut self, class_name: String) {
-                self.class_list.push(class_name);
+            /// "class1 class2"のような追加も可能
+            pub fn add_class(&mut self, class_name: &str) {
+                let classes: Vec<&str> = class_name.split(' ').collect();
+                for class in classes {
+                    self.class_list.push(class.to_string());
+                }
             }
 
             /// Elementのidを変更する
@@ -41,8 +45,8 @@ pub mod elements {
             }
 
             /// ElementにinnerTextを設定する
-            pub fn set_text(&mut self, text: String) {
-                self.text = text;
+            pub fn set_text(&mut self, text: &String) {
+                self.text = text.to_string();
             }
         }
 
@@ -91,7 +95,7 @@ pub mod input {
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Input {
         // 該当年度
-        pub year: u16,
+        pub year: i32,
         // カレンダーのタイトル
         pub title: String,
         // イベント一覧
@@ -111,8 +115,72 @@ pub mod input {
         /// イベントの開催日程
         #[derive(Debug, Serialize, Deserialize)]
         pub struct Date {
-            pub month: u8,
-            pub days: Vec<u8>,
+            pub month: u32,
+            pub days: Vec<u32>,
+        }
+    }
+}
+
+pub mod date {
+    #[derive(Debug)]
+    pub enum MonthNames {
+        January,
+        February,
+        March,
+        April,
+        May,
+        June,
+        July,
+        August,
+        September,
+        October,
+        November,
+        December,
+    }
+
+    impl MonthNames {
+        pub fn from_u32(i: u32) -> MonthNames {
+            match i {
+                0 => {
+                    MonthNames::January
+                }
+                1 => {
+                    MonthNames::February
+                }
+                2 => {
+                    MonthNames::March
+                }
+                3 => {
+                    MonthNames::April
+                }
+                4 => {
+                    MonthNames::May
+                }
+                5 => {
+                    MonthNames::June
+                }
+                6 => {
+                    MonthNames::July
+                }
+                7 => {
+                    MonthNames::August
+                }
+                8 => {
+                    MonthNames::September
+                }
+                9 => {
+                    MonthNames::October
+                }
+                10 => {
+                    MonthNames::November
+                }
+                11 => {
+                    MonthNames::December
+                }
+                _ => {
+                    panic!(format!("There is no {}th month.", i))
+                }
+            }
         }
     }
 }
