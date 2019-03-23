@@ -1,0 +1,46 @@
+{
+  "year": 2019,
+  "circle": "Amusement Creators",
+  "events": [
+    {
+      "name": "合同新歓",
+      "dates": [
+        {
+          "month": 4,
+          "days": [
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ミーティング",
+      "dates": [
+        {
+          "month": 4,
+          "days": [
+            10,
+            17,
+            24
+          ]
+        }
+      ]
+    },
+    {
+      "name": "もくもく会",
+      "dates": [
+        {
+          "month": 4,
+          "days": [
+            13,
+            14,
+            20,
+            21,
+            27,
+            28
+          ]
+        }
+      ]
+    }
+  ],
+}
