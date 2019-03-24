@@ -217,8 +217,6 @@ pub mod create_html {
 
         let schedule = calc_calendar(input);
 
-        println!("Schedule: {:?}", schedule);
-
         // scheduleを月ごとに分ける
         let mut schedules_monthly: Vec<Vec<(NaiveDate, Option<i32>)>> = Vec::new();
         let mut m = 0;
