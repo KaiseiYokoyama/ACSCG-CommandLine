@@ -20,6 +20,10 @@ fn main() {
 //    let program: String = env::args().next().unwrap();
     // 実行時引数
     let args: Vec<String> = env::args().skip(1).collect();
+    if args.len() == 0 {
+        println!("Illegal Arguments");
+        return;
+    }
     // 入力ファイルへのpath
     let path = &args[0];
     // 入力ファイルの内容
