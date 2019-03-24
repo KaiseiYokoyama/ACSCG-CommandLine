@@ -15,3 +15,6 @@ $ cargo build
 $ cd target/debug/
 $ ./ACSCG [inputするファイル名] [outputするファイル名(オプション)]
 ```
+
+## format of input
+[input_sample.json](input_sample.json)を御覧ください。
