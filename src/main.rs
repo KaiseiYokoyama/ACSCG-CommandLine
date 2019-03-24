@@ -9,6 +9,8 @@ extern crate num_derive;
 mod structs;
 
 use std::env;
+use std::fs::File;
+use std::io::{self, Read, Write, BufWriter};
 use crate::structs::input::Input;
 use crate::structs::web::css::MakerCSSs;
 use num_traits::FromPrimitive;
@@ -39,7 +41,19 @@ fn main() {
     }
 
     // html生成
-    create_html::create(input);
+    let html = create_html::create(input);
+
+
+    let file =
+        // 出力ファイル名の指定を受けているとき
+        if args.len() >= 2 {
+            File::create(&args[1]).expect("Unable to create file")
+        } else {
+            File::create("calendar.html").unwrap()
+        };
+    let mut buf = BufWriter::new(file);
+    buf.write(html.as_bytes()).unwrap();
+    buf.flush().unwrap();
 }
 
 pub mod create_html {
@@ -53,7 +67,7 @@ pub mod create_html {
 
     /// Input構造体(インプットされたファイルの中身)を受け取って、
     /// それに応じたカレンダーのhtmlを出力する
-    pub fn create(input: Input) {
+    pub fn create(input: Input) -> String {
         // js -> document
         let mut document = Element::create("html");
 
@@ -69,7 +83,7 @@ pub mod create_html {
         let mut style = create_style(&input);
         document.append(style);
 
-        println!("{}", &document.to_html_index_noted(0));
+        return document.to_html_index_noted(0);
     }
 
     /// html::head領域を作成する
