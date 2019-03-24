@@ -4,15 +4,18 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate num_traits;
+extern crate num_derive;
 
 mod structs;
 
 use std::env;
 use crate::structs::input::Input;
+use crate::structs::web::css::MakerCSSs;
+use num_traits::FromPrimitive;
 
 fn main() {
     // 実行ファイルのpath
-    let program: String = env::args().next().unwrap();
+//    let program: String = env::args().next().unwrap();
     // 実行時引数
     let args: Vec<String> = env::args().skip(1).collect();
     // 入力ファイルへのpath
@@ -22,16 +25,31 @@ fn main() {
     // struct Input化した入力ファイル
     let input: Input = serde_json::from_str(&input).expect("ファイルの内容が不正です");
 
+    let mut limit_of_events = 0;
+
+    loop {
+        match MakerCSSs::from_i32(limit_of_events) {
+            None => break,
+            _ => { limit_of_events += 1; }
+        }
+    }
+    if input.events.len() > limit_of_events as usize {
+        println!("イベントの種類は{}つまでです", limit_of_events);
+        return;
+    }
+
     // html生成
     create_html::create(input);
 }
 
 pub mod create_html {
+    use crate::structs::web::{ToHtml, element::Element, css::CSS};
+    use crate::structs::web::css::MakerCSSs;
     use crate::structs::input::Input;
-    use crate::structs::elements::element::Element;
     use crate::structs::date::MonthNames;
-    use chrono::{NaiveDate, Duration, Weekday, Datelike};
-    use num_traits::cast::FromPrimitive;
+
+    use chrono::{NaiveDate, Weekday, Datelike};
+    use num_traits::FromPrimitive;
 
     /// Input構造体(インプットされたファイルの中身)を受け取って、
     /// それに応じたカレンダーのhtmlを出力する
@@ -47,7 +65,11 @@ pub mod create_html {
         let mut body = create_body(&input);
         document.append(body);
 
-        println!("{}", &document.to_string());
+        // style領域を追加
+        let mut style = create_style(&input);
+        document.append(style);
+
+        println!("{}", &document.to_html_index_noted(0));
     }
 
     /// html::head領域を作成する
@@ -73,16 +95,16 @@ pub mod create_html {
         materialicons.set_attribute("rel", "stylesheet");
 
         // todo remove
-        let mut custom = Element::create("link");
-        custom.set_attribute("rel", "stylesheet");
-        custom.set_attribute("href", "custom.css");
+//        let mut custom = Element::create("link");
+//        custom.set_attribute("rel", "stylesheet");
+//        custom.set_attribute("href", "custom.css");
 
         // append to head
         head.append(title);
         head.append(materializecss_css);
         head.append(materializecss_js);
         head.append(materialicons);
-        head.append(custom);
+//        head.append(custom);
 
         return head;
     }
@@ -151,8 +173,9 @@ pub mod create_html {
             let mut li = Element::create("li");
             // カレンダー中でイベントを示すマーカーのサンプル
             let mut span_marker = Element::create("span");
-            span_marker.set_text(&"  ".to_string());
+            span_marker.set_text(&"10".to_string());
             span_marker.set_attribute("event_index", &format!("{}", i));
+            span_marker.add_class("circled");
             // イベントの名前
             let mut span_description = Element::create("span");
             span_description.set_text(&input.events[i].name);
@@ -342,12 +365,20 @@ pub mod create_html {
                     if index == schedule_monthly.len() {
                         // schedule_monthly[index]がOutBoundsOfIndexになるのを防ぐ
                     } else {
-                        let (ref day, _) = schedule_monthly[index];
+                        let (ref day, ref eve) = schedule_monthly[index];
                         let weekday = day.weekday();
 
                         if Weekday::from_i32((j + 6) % 7).unwrap() == weekday {
                             // 日付を出力する
-                            td.set_text(&format!("{}", index + 1));
+                            let mut span = Element::create("span");
+                            span.set_text(&format!("{}", index + 1));
+                            // イベントがある日を出力したとき
+                            if let Some(event_index) = eve {
+                                span.set_attribute("event_index", &format!("{}", event_index));
+                                span.add_class("circled");
+                            }
+
+                            td.append(span);
                             index += 1;
                         } else {
                             // 何もしない
@@ -421,5 +452,109 @@ pub mod create_html {
         }
 
         return schedules;
+    }
+
+    /// style領域(css)を追加
+    fn create_style(input: &Input) -> Element {
+        let mut styles = Element::create("div");
+        styles.add_class("styles");
+
+        let mut style_static = create_style_static();
+        styles.append(style_static);
+
+        let mut style_dynamic = create_style_dynamic(input);
+        styles.append(style_dynamic);
+
+        return styles;
+    }
+
+    /// CSSのうち入力(input)によって変化しない部分を出力する
+    fn create_style_static() -> Element {
+        let mut css_vec: Vec<CSS> = Vec::new();
+
+        let mut css = CSS::create("nav");
+        css.push_declaration("box-shadow", "none");
+        css.push_declaration("font-family", "Menlo");
+        css_vec.push(css);
+
+        let mut css = CSS::create("header");
+        css.push_declaration("padding", "20px 0");
+        css_vec.push(css);
+
+        let mut css = CSS::create(".event-description");
+        css.push_declaration("margin", "0 20px");
+        css.push_declaration("padding", "10px 0");
+        css.push_declaration("background-color", "rgb(244,245,246)");
+        css.push_declaration("border-left", "#ee6e73 solid 3px");
+        css_vec.push(css);
+
+        let mut css = CSS::create(".event-description ul.collection, .event-description ul.collection li.collection-item");
+        css.push_declaration("border", "none");
+        css.push_declaration("background-color", "inherit");
+        css_vec.push(css);
+
+        let mut css = CSS::create(".calendar-title");
+        css.push_declaration("width", "88vw");
+        css_vec.push(css);
+
+        let mut css = CSS::create(".calendar-title i");
+        css.push_declaration("font-size", "80px");
+        css.push_declaration("color", "#e0e0e0");
+        css_vec.push(css);
+
+        let mut css = CSS::create(".calendar-title .date");
+        css.push_declaration("padding", "10px 0");
+        css.push_declaration("color", "#757575");
+        css_vec.push(css);
+
+        let mut css = CSS::create(".calendar-title .date .month");
+        css.push_declaration("font-size", "25px");
+        css_vec.push(css);
+
+        let mut css = CSS::create(".circled");
+        css.push_declaration("padding", "10px");
+        css.push_declaration("border-radius", "5px");
+        css_vec.push(css);
+
+        let mut css = CSS::create(".circled.digit");
+        css.push_declaration("padding-right", "14px");
+        css.push_declaration("padding-left", "14px");
+        css_vec.push(css);
+
+        // todo remove non-static
+        let mut css = CSS::create(".circled.red, .circled.blue");
+        css.push_declaration("color", "white");
+        css_vec.push(css);
+
+        let mut style = String::new();
+        for static_css in css_vec {
+            style = format!("{}{}", style, static_css.to_html());
+        }
+
+        let mut css = Element::create("style");
+        css.set_text(&style);
+
+        return css;
+    }
+
+    /// CSSのうち入力(input)によって変化する部分を出力する
+    fn create_style_dynamic(input: &Input) -> Element {
+        let mut css = Element::create("style");
+
+        let mut css_vec: Vec<CSS> = Vec::new();
+
+        for i in 0..input.events.len() {
+            let csss = &mut MakerCSSs::from_i32(i as i32).unwrap().to_csss();
+            css_vec.append(csss);
+        }
+
+        let mut style = String::new();
+        for css in css_vec {
+            style = format!("{}{}", style, css.to_html());
+        }
+
+        css.set_text(&style);
+
+        return css;
     }
 }
