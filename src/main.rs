@@ -171,6 +171,7 @@ pub mod create_html {
         for i in 0..input.events.len() {
             // イベントの説明
             let mut li = Element::create("li");
+            li.add_class("collection-item");
             // カレンダー中でイベントを示すマーカーのサンプル
             let mut span_marker = Element::create("span");
             span_marker.set_text(&"10".to_string());
