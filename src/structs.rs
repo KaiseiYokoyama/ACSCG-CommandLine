@@ -1,5 +1,15 @@
-pub mod elements {
+pub mod web {
+    /// htmlにstructを変換する実装を提供させるtrait
+    pub trait ToHtml {
+        /// structをhtmlに変換する
+        fn to_html(&self) -> String;
+
+        fn to_html_index_noted(&self, i: i32) -> String;
+    }
+
     pub mod element {
+        use super::ToHtml;
+
         pub struct Element {
             tag: String,
             id: String,
@@ -50,12 +60,12 @@ pub mod elements {
             }
         }
 
-        impl ToString for Element {
-            fn to_string(&self) -> String {
+        impl ToHtml for Element {
+            fn to_html(&self) -> String {
                 // 子要素のhtml
                 let mut children_html = String::new();
                 for child in &self.children {
-                    children_html = format!("{}{}", children_html, child.to_string());
+                    children_html = format!("{}{}", children_html, child.to_html());
                 }
 
                 // <{tag}{id}{class}>{children}</{tag}>
@@ -68,9 +78,60 @@ pub mod elements {
                                // attributeがあれば出力
                                if self.attributes.len() == 0 { String::new() } else { attributes_to_html(&self.attributes) },
                                // textがあれば出力
-                               if self.text.len() == 0 { String::new() } else { self.text.clone() },
-                               // 子要素のhtml
+                               if self.text.len() == 0 { String::new() } else { format!("\n    {}", self.text.clone()) },
+                               // 子要素があれば出力
+                               if self.children.len() == 0 { String::new() } else { format!("{}", children_html) },
+                               &self.tag);
+            }
+
+            fn to_html_index_noted(&self, i: i32) -> String {
+                // インデント(1tab=4space)
+                let mut indent = String::new();
+                for j in 0..i {
+                    indent = format!("{}{}", indent, "    ");
+                }
+
+                // 子要素なし
+                if self.children.len() == 0 {
+                    // {indent}<{tag}{id}{class}{attribute}>{text}</{tag}>
+                    return format!("{}<{}{}{}{}>{}</{}>\n",
+                                   &indent,
+                                   &self.tag,
+                                   // idがあれば出力
+                                   if self.id.len() == 0 { String::new() } else { format!(" id=\"{}\"", self.id) },
+                                   // classがあれば出力
+                                   if self.class_list.len() == 0 { String::new() } else { format!(" class=\"{}\"", &self.class_list.join(" ")) },
+                                   // attributeがあれば出力
+                                   if self.attributes.len() == 0 { String::new() } else { attributes_to_html(&self.attributes) },
+                                   // textがあれば出力
+                                   if self.text.len() == 0 { String::new() } else { format!("{}", self.text.clone()) },
+                                   &self.tag
+                    );
+                }
+
+                // 子要素のhtml
+                let mut children_html = String::new();
+                for child in &self.children {
+                    children_html = format!("{}{}", children_html, child.to_html_index_noted(i + 1));
+                }
+
+                // {indent}<{tag}{id}{class}{attributes}>
+                // {children}{text}
+                // {indent}</{tag}>
+                return format!("{}<{}{}{}{}>\n{}{}{}</{}>\n",
+                               &indent,
+                               &self.tag,
+                               // idがあれば出力
+                               if self.id.len() == 0 { String::new() } else { format!(" id=\"{}\"", self.id) },
+                               // classがあれば出力
+                               if self.class_list.len() == 0 { String::new() } else { format!(" class=\"{}\"", &self.class_list.join(" ")) },
+                               // attributeがあれば出力
+                               if self.attributes.len() == 0 { String::new() } else { attributes_to_html(&self.attributes) },
+                               // textがあれば出力
+                               if self.text.len() == 0 { String::new() } else { format!("\n    {}", self.text.clone()) },
+                               // 子要素があれば出力
                                &children_html,
+                               &indent,
                                &self.tag);
             }
         }
@@ -84,6 +145,110 @@ pub mod elements {
             }
 
             return attributes_html;
+        }
+    }
+
+    pub mod css {
+        use super::ToHtml;
+        use num_derive::FromPrimitive;
+
+        /// cssのセレクター(複数可)と宣言ブロックのセット
+        ///
+        /// elem.class {
+        ///     selector: value;
+        /// }
+        ///
+        /// -> CSS { selector: [elem.class], declaration: [(selector,value)] }
+        ///
+        #[derive(Debug)]
+        pub struct CSS {
+            /// セレクター
+            selectors: Vec<String>,
+            /// スタイル宣言
+            declarations: Vec<(String, String)>,
+        }
+
+        impl ToHtml for CSS {
+            fn to_html(&self) -> String {
+                let mut selectors = self.selectors.join(" ");
+                let mut declarations = String::new();
+                for declaration in &self.declarations {
+                    let (key, val) = declaration;
+                    declarations = format!("{}  {}: {}; \n", declarations, key, val);
+                }
+
+                return format!("{}{}{}{}", selectors, " {\n", declarations, "}\n");
+            }
+
+            fn to_html_index_noted(&self, i: i32) -> String {
+                return self.to_html();
+            }
+        }
+
+        impl CSS {
+            pub fn create(selector: &str) -> CSS {
+                let mut css = CSS { selectors: Vec::new(), declarations: Vec::new() };
+                let selectors: Vec<&str> = selector.split(' ').collect();
+                for selector in selectors {
+                    css.selectors.push(selector.to_string());
+                }
+
+                return css;
+            }
+
+            pub fn push_declaration(&mut self, key: &str, val: &str) {
+                let declaration = (key.to_string(), val.to_string());
+                self.declarations.push(declaration);
+            }
+        }
+
+        /// markerに適用するcssのパターン列挙
+        #[derive(FromPrimitive)]
+        pub enum MakerCSSs {
+            Pattern0 = 0,
+            Pattern1,
+            Pattern2,
+            Pattern3,
+            Pattern4,
+        }
+
+        impl MakerCSSs {
+            pub fn to_csss(&self) -> Vec<CSS> {
+                match self {
+                    MakerCSSs::Pattern0 => {
+                        // blue
+                        return MakerCSSs::csss_from_colorcode(0, "#2196F3", true);
+                    }
+                    MakerCSSs::Pattern1 => {
+                        // red
+                        return MakerCSSs::csss_from_colorcode(1, "#F44336", true);
+                    }
+                    MakerCSSs::Pattern2 => {
+                        // teal
+                        return MakerCSSs::csss_from_colorcode(2, "#009688", true);
+                    }
+                    MakerCSSs::Pattern3 => {
+                        // deep purple
+                        return MakerCSSs::csss_from_colorcode(3, "#5e35b1", true);
+                    }
+                    MakerCSSs::Pattern4 => {
+                        // orange
+                        return MakerCSSs::csss_from_colorcode(4, "#fb8c00", true);
+                    }
+                }
+            }
+
+            pub fn csss_from_colorcode(index: u32, colorcode: &str, whitetext: bool) -> Vec<CSS> {
+                let mut css = CSS::create(&format!("[event_index=\"{}\"]", index));
+                css.push_declaration("background-color", &format!("{} !important", colorcode));
+                if whitetext { css.push_declaration("color", "white"); }
+
+                let mut css_marker_sample = CSS::create(&format!(".event-description [event_index=\"{}\"]", index));
+                css_marker_sample.push_declaration("background-color", &format!("{} !important", colorcode));
+                css_marker_sample.push_declaration("color", &format!("{} !important", colorcode));
+
+                return vec![css, css_marker_sample];
+            }
         }
     }
 }
